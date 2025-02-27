@@ -15,33 +15,44 @@ datasource db {
 
 model User {
   id       String @id @default(cuid())
-  username String
-  email    String
+  username String @unique
+  email    String @unique
   password String
 
-  referralCode String @unique
-  referredBy   String
+  // referralCode         String  @unique
+  // referrerReferralCode String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  referred  Referral[] @relation("ReferredUsers")
-  referrals Referral[] @relation("ReferringUsers")
+  passwordResetTokens PasswordResetToken[]
 
-  @@unique([username, email])
+  // referred  Referral[] @relation("ReferredUsers")
+  // referrals Referral[] @relation("ReferringUsers")
 }
 
-model Referral {
-  id              String @id @default(cuid())
-  status          String
-  referringUserId String
-  referredUserId  String
+// model Referral {
+//   id              String @id @default(cuid())
+//   status          String
+//   referringUserId String
+//   referredUserId  String
 
-  referredTo User @relation("ReferredUsers", fields: [referredUserId], references: [id])
-  referredBy User @relation("ReferringUsers", fields: [referringUserId], references: [id])
+//   referredTo User @relation("ReferredUsers", fields: [referredUserId], references: [id])
+//   referredBy User @relation("ReferringUsers", fields: [referringUserId], references: [id])
 
-  dateReferred DateTime @default(now())
+//   dateReferred DateTime @default(now())
 
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  token     String   @unique
+  expiresAt DateTime
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [email], references: [email], onDelete: Cascade)
+
+  @@index([token])
 }
