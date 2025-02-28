@@ -81,7 +81,7 @@ This is the backend for a platform similar to **Linktree** or **Bento.me**, feat
 5. **Start the server**:
 
    ```bash
-   npm start
+   npm run start:dev
    ```
 
 6. **Run tests** (optional):
@@ -96,15 +96,15 @@ This is the backend for a platform similar to **Linktree** or **Bento.me**, feat
 Create a `.env` file in the root directory and add the following variables:
 
 ```env
-PORT=3000
-DATABASE_URL=postgres://user:password@localhost:5432/dbname
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRES_IN=1h
-EMAIL_HOST=smtp.example.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@example.com
-EMAIL_PASSWORD=your_email_password
-REDIS_URL=redis://localhost:6379
+DATABASE_URL=
+REDIS_HOST=
+REDIS_PORT=
+REDIS_PASSWORD=
+REDIS_USERNAME=
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_PASSWORD=
+EMAIL_USER=
 ```
 
 ---
@@ -113,7 +113,7 @@ REDIS_URL=redis://localhost:6379
 
 ### User Registration
 
-- **POST /api/register**
+- **POST /api/auth/user/register**
   - Register a new user.
   - Request Body:
     ```json
@@ -127,7 +127,7 @@ REDIS_URL=redis://localhost:6379
 
 ### User Login
 
-- **POST /api/login**
+- **POST /api/auth/user/login**
   - Authenticate a user and return a JWT token.
   - Request Body:
     ```json
@@ -137,9 +137,20 @@ REDIS_URL=redis://localhost:6379
     }
     ```
 
+### Forget Password
+
+- **POST /api/auth/user/forgot-password**
+  - Set a new password using a secret token.
+  - Request Body:
+    ```json
+    {
+      "email": "user@example.com"
+    }
+    ```
+
 ### Password Reset
 
-- **POST /api/forgot-password**
+- **POST /api/auth/user/reset-password**
   - Request a password reset link.
   - Request Body:
     ```json
@@ -164,27 +175,31 @@ REDIS_URL=redis://localhost:6379
 
 ## Database Schema
 
-### Users Table
+### User Model
 
-| Column        | Type         | Description                |
-| ------------- | ------------ | -------------------------- |
-| id            | SERIAL       | Primary key                |
-| username      | VARCHAR(50)  | Unique username            |
-| email         | VARCHAR(100) | Unique email               |
-| password_hash | TEXT         | Hashed password            |
-| referral_code | VARCHAR(20)  | Unique referral code       |
-| referred_by   | INTEGER      | ID of the referring user   |
-| created_at    | TIMESTAMP    | Timestamp of user creation |
+| Field                    | Type                 | Default  | Attributes                | Description                                |
+| ------------------------ | -------------------- | -------- | ------------------------- | ------------------------------------------ |
+| **id**                   | String               | `cuid()` | `@id`, `@default(cuid())` | Primary key, unique identifier             |
+| **username**             | String               | –        | `@unique`                 | Unique username                            |
+| **email**                | String               | –        | `@unique`                 | Unique user email                          |
+| **password**             | String               | –        | –                         | Hashed password                            |
+| **createdAt**            | DateTime             | `now()`  | `@default(now())`         | Timestamp when the user was created        |
+| **updatedAt**            | DateTime             | –        | `@updatedAt`              | Timestamp when the user was last updated   |
+| **passwordResetTokens**  | PasswordResetToken[] | –        | Relation                  | One-to-many relation with reset tokens     |
+| **isVerified**           | Boolean              | `false`  | `@default(false)`         | Indicates if the email is verified         |
+| **verificationToken**    | String?              | –        | `@unique`                 | Optional email verification token          |
+| **verificationTokenExp** | DateTime?            | –        | –                         | Expiration date for the verification token |
 
-### Referrals Table
+### PasswordResetToken Model
 
-| Column           | Type        | Description                                    |
-| ---------------- | ----------- | ---------------------------------------------- |
-| referred_id      | SERIAL      | Primary key                                    |
-| referred_user_id | INTEGER     | ID of the referred user                        |
-| referrer_id      | INTEGER     | ID of the referrer                             |
-| date_referred    | TIMESTAMP   | Timestamp of referral                          |
-| status           | VARCHAR(20) | Status of referral (e.g., pending, successful) |
+| Field         | Type     | Default  | Attributes                                                           | Description                                              |
+| ------------- | -------- | -------- | -------------------------------------------------------------------- | -------------------------------------------------------- |
+| **id**        | String   | `uuid()` | `@id`, `@default(uuid())`                                            | Primary key, unique identifier                           |
+| **email**     | String   | –        | `@unique`                                                            | Unique email associated with the token                   |
+| **token**     | String   | –        | `@unique`, indexed (`@@index([token])`)                              | Unique token for password reset                          |
+| **expiresAt** | DateTime | –        | –                                                                    | Date and time when the token expires                     |
+| **createdAt** | DateTime | `now()`  | `@default(now())`                                                    | Timestamp when the token was created                     |
+| **user**      | User     | –        | `@relation(fields: [email], references: [email], onDelete: Cascade)` | Relationship to the associated User (deleted on cascade) |
 
 ---
 

@@ -26,7 +26,7 @@ router.get("/verify-email", (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/verify-email.html"));
 });
 
-router.post("/verify-email", validateRequest, verifyEmail);
+router.post("/verify-email", verifyEmail);
 
 router.post(
   "/resend-verification",
