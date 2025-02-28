@@ -46,3 +46,8 @@ export const validateResetPassword = [
     .matches(/[0-9]/)
     .withMessage("Must contain at least one number"),
 ];
+
+// Validation for verification email
+export const validateResendVerification = [
+  body("email").isEmail().withMessage("Valid email required").normalizeEmail(),
+];

@@ -27,6 +27,10 @@ model User {
 
   passwordResetTokens PasswordResetToken[]
 
+  isVerified           Boolean   @default(false)
+  verificationToken    String?   @unique
+  verificationTokenExp DateTime?
+
   // referred  Referral[] @relation("ReferredUsers")
   // referrals Referral[] @relation("ReferringUsers")
 }

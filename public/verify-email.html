@@ -1,0 +1,243 @@
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Verification</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f4f7f9;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .verification-box {
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+      padding: 40px;
+    }
+
+    .icon-container {
+      font-size: 4.5em;
+      color: #007bff;
+    }
+
+    .icon-container.success {
+      color: #28a745;
+    }
+
+    .icon-container.error {
+      color: #dc3545;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 2em;
+    }
+
+    .message {
+      color: #555;
+      line-height: 1.7;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+    }
+
+    .message.success-text {
+      color: #28a745;
+    }
+
+    .message.error-text {
+      color: #dc3545;
+    }
+
+    .email-address {
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .button-container {
+      margin-top: 30px;
+    }
+
+    .instruction {
+      color: #777;
+      margin-bottom: 15px;
+      font-size: 0.95em;
+    }
+
+    .resend-link {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    .resend-link:hover {
+      text-decoration: underline;
+    }
+
+    .verify-button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 14px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.1em;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .verify-button:hover {
+      background-color: #0056b3;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .verify-button:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .verify-button:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+
+    .footer {
+      margin-top: 40px;
+      color: #999;
+      font-size: 0.9em;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="verification-box">
+      <div class="icon-container">
+        <i class="fas fa-envelope-open-text"></i>
+        <i class="fas fa-check-circle hidden success-icon"></i>
+        <i class="fas fa-times-circle hidden error-icon"></i>
+      </div>
+      <h1>Verify Your Email Address</h1>
+      <p class="message">
+        Thank you for signing up! To complete your registration, please click
+        the "Verify Email" button below.
+      </p>
+
+      <p class="message success-text hidden">
+        <i class="fas fa-check-circle"></i> Your email has been successfully
+        verified! You can now proceed.
+      </p>
+
+      <p class="message error-text hidden">
+        <i class="fas fa-times-circle"></i> Email verification failed. Please
+        try again or resend the verification email.
+      </p>
+
+      <button class="verify-button" id="verify-button">Verify Email</button>
+      <div class="button-container">
+        <p class="instruction">
+          Didn't receive the email? Check your spam folder or
+          <a href="#" class="resend-link">Resend Verification Email</a>.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; 2023 Your Company Name. All rights reserved.
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    const verifyButton = document.getElementById("verify-button");
+    const messageParagraph = document.querySelector(".message");
+    const successMessageParagraph = document.querySelector(
+      ".message.success-text"
+    );
+    const errorMessageParagraph = document.querySelector(".message.error-text");
+    const iconContainer = document.querySelector(".icon-container");
+    const initialIcon = document.querySelector(
+      ".icon-container > i.fa-envelope-open-text"
+    );
+    const successIcon = document.querySelector(
+      ".icon-container > i.success-icon"
+    );
+    const errorIcon = document.querySelector(".icon-container > i.error-icon");
+
+    verifyButton.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      verifyButton.disabled = true;
+      verifyButton.textContent = "Verifying...";
+
+      initialIcon.classList.add("hidden");
+
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/auth/user/verify-email?token=${token}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          iconContainer.classList.add("success");
+          successIcon.classList.remove("hidden");
+          messageParagraph.classList.add("hidden");
+          successMessageParagraph.classList.remove("hidden");
+        } else {
+          const errorData = await response.json();
+          console.error("Verification failed:", errorData);
+
+          iconContainer.classList.add("error");
+          errorIcon.classList.remove("hidden");
+          messageParagraph.classList.add("hidden");
+          errorMessageParagraph.classList.remove("hidden");
+          errorMessageParagraph.textContent =
+            errorData.message ||
+            "Email verification failed. Please try again or resend the verification email.";
+        }
+      } catch (error) {
+        console.error("Fetch error:", error);
+        iconContainer.classList.add("error");
+        errorIcon.classList.remove("hidden");
+        messageParagraph.classList.add("hidden");
+        errorMessageParagraph.classList.remove("hidden");
+        errorMessageParagraph.textContent =
+          "An unexpected error occurred during verification. Please try again later.";
+      } finally {
+        verifyButton.disabled = false;
+        verifyButton.textContent = "Verify Email";
+      }
+    });
+  </script>
+</body>

@@ -7,6 +7,11 @@ import {
   requestPasswordReset,
   resetPasswordWithToken,
 } from "../utils/reset-password";
+import { sendVerificationEmail } from "../utils/nodemailer";
+import {
+  generateVerificationToken,
+  verifyEmailToken,
+} from "../utils/verfiy-email";
 
 export const registerUser = async (req: Request, res: Response) => {
   try {
@@ -32,7 +37,7 @@ export const registerUser = async (req: Request, res: Response) => {
       return;
     }
 
-    const user = await prismaClient.user.create({
+    await prismaClient.user.create({
       data: {
         username: username,
         email: email,
@@ -40,9 +45,13 @@ export const registerUser = async (req: Request, res: Response) => {
       },
     });
 
-    const token = generateToken(username, email);
+    const token = await generateVerificationToken(email);
+    await sendVerificationEmail(email, token);
 
-    res.status(200).json({ user, token });
+    res.status(201).json({
+      message:
+        "Registration successful! Please check your email to verify your account",
+    });
   } catch (error: any) {
     console.log(error.message);
     res.status(400).json(error);
@@ -52,25 +61,32 @@ export const registerUser = async (req: Request, res: Response) => {
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const authHeaders = req.headers.authorization;
-    if (!authHeaders || authHeaders.split(" ")[1].startsWith("Bearer ")) {
+    if (!authHeaders || !authHeaders.split(" ")[1].startsWith("Bearer ")) {
       res.status(401).json({ message: "Auth headers missing" });
       return;
     }
     const token = authHeaders.split(" ")[1];
 
     const { email, password } = req.body;
+
     const user = await prismaClient.user.findUnique({
       where: {
         email: email,
       },
     });
 
+    if (!user) {
+      res.status(401).json({ message: "User not found with this email" });
+      return;
+    }
+
+    if (!user.isVerified) {
+      res.status(401).json({ message: "Please verify your email first" });
+      return;
+    }
+
     const result = verifyToken(token);
     if (result === null) {
-      if (!user) {
-        res.status(401).json({ message: "User not found with this email" });
-        return;
-      }
       if (!compareSync(password, user.password)) {
         res.status(401).json({ message: "Invalid Password" });
         return;
@@ -83,6 +99,42 @@ export const loginUser = async (req: Request, res: Response) => {
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json(error);
+  }
+};
+
+export const verifyEmail = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+    const user = await verifyEmailToken(token as string);
+
+    const registerToken = generateToken(user.username, user.email);
+
+    res.status(200).json({ user, registerToken });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const resendVerification = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const user = await prismaClient.user.findUnique({ where: { email } });
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    if (user.isVerified) {
+      res.status(400).json({ message: "Email already verified" });
+      return;
+    }
+
+    const token = await generateVerificationToken(email);
+    await sendVerificationEmail(email, token);
+
+    res.status(200).json({ message: "Verification email resent" });
+  } catch (error) {
+    res.status(500).json({ message: "Error resending verification email" });
   }
 };
 

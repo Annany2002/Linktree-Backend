@@ -1,6 +1,6 @@
 import { hashSync } from "bcryptjs";
 import { prismaClient } from "../config/prisma";
-import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import { sendPasswordResetEmail } from "./nodemailer";
 
 const RESET_TOKEN_EXPIRY = 60 * 60 * 1000;
@@ -9,7 +9,7 @@ export const generatePasswordResetToken = async (email: string) => {
     where: { email },
   });
 
-  const token = uuidv4();
+  const token = crypto.randomBytes(32).toString("hex");
 
   return prismaClient.passwordResetToken.create({
     data: {
